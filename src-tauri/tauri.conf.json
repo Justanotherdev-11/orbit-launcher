@@ -1,0 +1,38 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Orbit Launcher",
+  "version": "0.1.0",
+  "identifier": "dev.orbitlauncher.app",
+  "build": {
+    "frontendDist": "../ui"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "label": "main",
+        "title": "Orbit Launcher",
+        "width": 1280,
+        "height": 800,
+        "minWidth": 1000,
+        "minHeight": 640,
+        "decorations": false,
+        "center": true,
+        "dragDropEnabled": true,
+        "backgroundColor": "#06070c"
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self' ipc: http://ipc.localhost; img-src 'self' https: data: asset: http://asset.localhost; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src ipc: http://ipc.localhost; media-src https:; frame-src 'none'; object-src 'none'",
+      "assetProtocol": {
+        "enable": true,
+        "scope": ["$DATA/OrbitLauncher/**"]
+      }
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis"],
+    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/icon.png", "icons/icon.ico"]
+  }
+}

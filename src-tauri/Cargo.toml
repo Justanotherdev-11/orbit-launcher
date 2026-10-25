@@ -1,0 +1,40 @@
+[package]
+name = "orbit-launcher"
+version = "0.1.0"
+edition = "2021"
+description = "A clean, futuristic Minecraft launcher"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["protocol-asset"] }
+tauri-plugin-dialog = "2"
+tauri-plugin-single-instance = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["full"] }
+reqwest = { version = "0.12", features = ["json", "stream"] }
+futures = "0.3"
+anyhow = "1"
+sha1_smol = { version = "1", features = ["std"] }
+zip = { version = "2", default-features = false, features = ["deflate"] }
+flate2 = "1"
+dirs = "5"
+uuid = { version = "1", features = ["v4", "serde"] }
+md5 = "0.7"
+chrono = "0.4"
+open = "5"
+urlencoding = "2"
+rusqlite = { version = "0.32", features = ["bundled"] }
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]
+
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+strip = true
+panic = "abort"
