@@ -47,7 +47,7 @@ Double-click **Orbit Launcher.exe**. There's nothing to install, and you don't n
 ## Setup notes
 
 - **CurseForge** needs a free API key from [console.curseforge.com](https://console.curseforge.com/). Paste it in Settings → Integrations, or right on the Discover page. Modrinth needs no key.
-- **Microsoft sign-in.** Every third-party launcher signs in through its own Azure app, and Mojang has to approve it. Register one at portal.azure.com (personal accounts, "Allow public client flows" on), request access at [aka.ms/mce-reviewappid](https://aka.ms/mce-reviewappid), and paste the client ID into Settings → Integrations. Offline accounts work in the meantime for singleplayer and offline-mode servers.
+- **Microsoft sign-in.** Every third-party launcher signs in through its own Azure app, and Mojang has to approve it. Register one at portal.azure.com (personal accounts, "Allow public client flows" on), request access at [aka.ms/mce-reviewappid](https://aka.ms/mce-reviewappid), and paste the client ID into Settings → Integrations. Offline accounts are available once a Microsoft account that owns Minecraft: Java Edition has signed in, the same rule other approved launchers use.
 
 ## Building from source
 

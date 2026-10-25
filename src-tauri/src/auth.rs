@@ -103,13 +103,24 @@ fn offline_uuid(name: &str) -> String {
     uuid::Uuid::from_bytes(b).simple().to_string()
 }
 
+/// Offline play is only for people who own the game: a Microsoft account is only ever stored after
+/// its Minecraft profile was found, so having one here proves ownership (same rule as Prism).
+const OFFLINE_LOCKED: &str = "Offline accounts unlock after you sign in with a Microsoft account that owns Minecraft: Java Edition.";
+
+fn owns_game(s: &Store) -> bool {
+    s.accounts.iter().any(|a| a.kind == "msa")
+}
+
 #[tauri::command]
 pub fn add_offline_account(name: String) -> CmdResult<Vec<AccountView>> {
+    let mut s = load_store();
+    if !owns_game(&s) {
+        return Err(OFFLINE_LOCKED.into());
+    }
     let name = name.trim().to_string();
     if name.len() < 3 || name.len() > 16 || !name.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') {
         return Err("Offline names must be 3–16 letters, numbers or underscores".into());
     }
-    let mut s = load_store();
     upsert(&mut s, Account { uuid: offline_uuid(&name), name, kind: "offline".into(), ..Default::default() });
     save_store(&s).map_err(err)?;
     Ok(views(&s))
@@ -290,6 +301,9 @@ pub async fn account_for_launch() -> Result<Account> {
     let active = s.active.clone().or_else(|| s.accounts.first().map(|a| a.uuid.clone())).ok_or_else(|| anyhow!("NO_ACCOUNT"))?;
     let idx = s.accounts.iter().position(|a| a.uuid == active).ok_or_else(|| anyhow!("NO_ACCOUNT"))?;
     let acc = s.accounts[idx].clone();
+    if acc.kind != "msa" && !owns_game(&s) {
+        bail!(OFFLINE_LOCKED);
+    }
     if acc.kind != "msa" || acc.expires_at > now() + 300 {
         return Ok(acc);
     }

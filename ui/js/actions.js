@@ -9,7 +9,7 @@ import { icon, esc, h, modal, toast, errText, confirmDialog, LOADERS, GLYPHS, AC
 /** Launch an instance, optionally dropping straight into `{ server }` or `{ world }`. */
 export async function launch(inst, { server = null, world = null } = {}) {
   if (!activeAccount()) {
-    toast('Add an account first — Microsoft or offline.', 'info', { title: 'No account' });
+    toast('Sign in with your Microsoft account first.', 'info', { title: 'No account' });
     return accountsModal();
   }
   // Claim the instance before anything async, so a second click can't start a second launch.
@@ -29,8 +29,9 @@ export async function launch(inst, { server = null, world = null } = {}) {
     seq.success();
   } catch (e) {
     const msg = errText(e);
-    seq.fail(msg.includes('already running') ? 'Already running' : msg.split('\n')[0]);
+    seq.fail(msg.includes('already running') ? 'Already running' : /offline accounts unlock/i.test(msg) ? 'Sign in first' : msg.split('\n')[0]);
     if (msg.includes('NO_ACCOUNT')) accountsModal();
+    else if (/offline accounts unlock/i.test(msg)) { toast('Offline accounts unlock after you sign in with a Microsoft account that owns Minecraft: Java Edition.', 'info', { title: 'Sign in first' }); accountsModal(); }
     else if (msg.includes('MSA_CLIENT_ID_MISSING')) toast('Microsoft sign-in needs a client ID — see Settings → Integrations.', 'bad');
     else if (!msg.includes('already running')) toast(msg, 'bad', { title: `Couldn't launch ${inst.name}` });
   } finally {
@@ -69,6 +70,8 @@ export function accountsModal() {
   const body = m.el.querySelector('#acc-body');
   const render = () => {
     const accs = store.accounts;
+    // Same rule as other approved launchers: offline play needs a signed-in owner first.
+    const owner = accs.some((a) => a.kind === 'msa');
     body.innerHTML = `
       <div class="list" style="gap:8px">
         ${accs.length ? accs.map((a) => `
@@ -76,23 +79,24 @@ export function accountsModal() {
             <img src="${avatarUrl(a)}" alt="" />
             <div style="flex:1;min-width:0">
               <div style="font-weight:600">${esc(a.name)}</div>
-              <div class="dim mono" style="font-size:11px">${a.kind === 'msa' ? 'Microsoft' : 'Offline'}${a.active ? ' · active' : ''}</div>
+              <div class="dim mono" style="font-size:11px">${a.kind === 'msa' ? 'Microsoft' : owner ? 'Offline' : 'Offline · locked'}${a.active ? ' · active' : ''}</div>
             </div>
             ${a.active ? `<span class="chip accent">${icon('check', 12, 2.5)} Active</span>` : `<button class="btn sm" data-use="${esc(a.uuid)}">Use</button>`}
             <button class="btn icon sm ghost" data-rm="${esc(a.uuid)}" title="Remove">${icon('trash', 15)}</button>
-          </div>`).join('') : `<div class="empty" style="padding:24px"><div class="glyph">${icon('user', 26)}</div><h3>No accounts yet</h3><p>Sign in with Microsoft to play online, or add an offline profile for singleplayer.</p></div>`}
+          </div>`).join('') : `<div class="empty" style="padding:24px"><div class="glyph">${icon('user', 26)}</div><h3>No accounts yet</h3><p>Sign in with the Microsoft account you play Minecraft with. After that you can also add offline profiles.</p></div>`}
       </div>
       <div class="row-flex" style="margin-top:16px">
         <button class="btn primary" id="add-ms" style="flex:1">${icon('key', 16)} Microsoft account</button>
-        <button class="btn" id="add-off" style="flex:1">${icon('user', 16)} Offline account</button>
-      </div>`;
+        <button class="btn" id="add-off" style="flex:1" ${owner ? '' : 'disabled'}>${icon('user', 16)} Offline account</button>
+      </div>
+      ${owner ? '' : `<p class="hint" style="margin-top:10px">Offline accounts unlock after you sign in with a Microsoft account that owns Minecraft: Java Edition.</p>`}`;
     body.querySelectorAll('[data-use]').forEach((b) => (b.onclick = async () => { store.accounts = await invoke('set_active_account', { uuid: b.dataset.use }); refreshAccounts(); render(); }));
     body.querySelectorAll('[data-rm]').forEach((b) => (b.onclick = async () => {
       if (!(await confirmDialog('Remove account?', 'You can add it again any time.', { ok: 'Remove', danger: true }))) return;
       store.accounts = await invoke('remove_account', { uuid: b.dataset.rm }); refreshAccounts(); render();
     }));
     body.querySelector('#add-ms').onclick = () => { m.close(); microsoftLogin(); };
-    body.querySelector('#add-off').onclick = () => offlineForm();
+    body.querySelector('#add-off').onclick = () => owner && offlineForm();
   };
   const offlineForm = () => {
     body.innerHTML = `
@@ -101,7 +105,7 @@ export function accountsModal() {
     const input = body.querySelector('#off-name');
     const add = async () => {
       try { store.accounts = await invoke('add_offline_account', { name: input.value }); await refreshAccounts(); toast(`Playing as ${input.value.trim()}`, 'good'); render(); }
-      catch (e) { toast(errText(e), 'bad'); }
+      catch (e) { const msg = errText(e); toast(/offline accounts unlock/i.test(msg) ? 'Offline accounts unlock after you sign in with a Microsoft account that owns Minecraft: Java Edition.' : msg, 'bad'); }
     };
     body.querySelector('#off-add').onclick = add;
     body.querySelector('#off-back').onclick = render;
@@ -162,7 +166,7 @@ function clientIdHelp() {
         </ol>
       </div></div>
       <div class="field" style="margin-top:16px"><label>Azure client ID</label><input class="input mono" id="cid" placeholder="00000000-0000-0000-0000-000000000000" value="${esc(store.settings.msClientId || '')}" /></div>
-      <p class="hint" style="margin-top:12px">Until then, an offline account works for singleplayer and offline-mode servers.</p>`,
+      <p class="hint" style="margin-top:12px">Sign-in starts working once Mojang approves the ID.</p>`,
     foot: `<button class="btn ghost" data-close>Later</button><button class="btn primary" id="cid-save">Save &amp; sign in</button>`,
   });
   m.el.querySelector('#cid-save').onclick = async () => {
